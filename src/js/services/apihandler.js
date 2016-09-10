@@ -22,7 +22,7 @@
 
             function removeFile(path) {
                 var def = $q.defer();
-                $firebase.ref('files' + $firebase.getValidKey(path) + '/_content@selectedSite').once('value', function (snap) {
+                $firebase.queryRef('files').child($firebase.getValidKey(path) + '/_content').once('value', function (snap) {
                     var val = snap.val();
                     if (val === null) {
                         $firebaseStorage.ref('files' + path + '@selectedSite', {isJs: false}).delete()
@@ -47,8 +47,8 @@
                     pathObj = getPathObj(path),
                     promises = [];
                 removeFile(path).then(function () {
-                    promises[0] = $firebase.ref('files' + $firebase.getValidKey(path) + '@selectedSite').set(null);
-                    promises[1] = $firebase.ref('files' + $firebase.getValidKey(pathObj.root) + '/_content/' + $firebase.getValidKey(pathObj.fileName) + '@selectedSite').set(null);
+                    promises[0] = $firebase.queryRef('files').child($firebase.getValidKey(path)).set(null);
+                    promises[1] = $firebase.queryRef('files').child($firebase.getValidKey(pathObj.root) + '/_content/' + $firebase.getValidKey(pathObj.fileName)).set(null);
                     $q.all(promises).then(def.resolve);
                 });
                 return def.promise;
@@ -91,7 +91,7 @@
                 var validPath = $firebase.getValidKey(path);
 
 
-                $firebase.ref('files' + validPath + '/_content@selectedSite').once('value', function (snap) {
+                $firebase.queryRef('files').child(validPath + '/_content').once('value', function (snap) {
                     var val = snap.val(),
                         data = {result: []};
                     angular.forEach(val, function (value) {
@@ -134,13 +134,13 @@
                         var srcPath = itemPathArr.join('/'),
                             _srcPath = srcPath===''? '/':srcPath+'/';
                         promise.then(function(){
-                            $firebase.ref('files'+_srcPath+'_content@selectedSite').child($firebase.getValidKey(fileName)).remove();
+                            $firebase.queryRef('files').child(_srcPath+'_content').child($firebase.getValidKey(fileName)).remove();
                         });
                     }
                     promises.push(promise);
                 });
                 $q.all(promises).then(function(){
-                    $firebase.ref('files'+validPath+'_content@selectedSite').update(data);
+                    $firebase.queryRef('files').child(validPath+'_content').update(data);
                     self.deferredHandler({
                         action: type,
                         items: items,
@@ -256,7 +256,7 @@
                             type: 'file'
                         };
                     }
-                    $firebase.ref('files' + validDest + '/_content@selectedSite').update(data)
+                    $firebase.queryRef('files').child(validDest + '/_content').update(data)
                         .then(function () {
                             var res = {
                                 result: {
@@ -499,11 +499,11 @@
                     pathObj = getPathObj(path),
                     rootPath = $firebase.getValidKey(pathObj.root),
                     dirName = pathObj.fileName;
-                $firebase.ref('files' + $firebase.getValidKey(path) + '@selectedSite').update({
+                $firebase.queryRef('files').child($firebase.getValidKey(path)).update({
                     '_content': {'__created': true}
                 });
 
-                $firebase.ref('files' + rootPath + '/_content/' + $firebase.getValidKey(dirName) + '@selectedSite').update({
+                $firebase.queryRef('files').child(rootPath + '/_content/' + $firebase.getValidKey(dirName)).update({
                     rights: 'drwxr-xr-x',
                     size: 0,
                     date: (new Date()).getTime(),
