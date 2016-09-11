@@ -5,11 +5,13 @@
 
             $http.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
-            var ApiHandler = function () {
-                this.inprocess = false;
-                this.asyncSuccess = false;
-                this.error = '';
-            };
+
+            var root = 'file-root-path?path=',
+                ApiHandler = function () {
+                    this.inprocess = false;
+                    this.asyncSuccess = false;
+                    this.error = '';
+                };
 
             function getPathObj(path) {
                 var pathArr = path.split('/'),
@@ -25,7 +27,7 @@
                 $firebase.queryRef('files').child($firebase.getValidKey(path) + '/_content').once('value', function (snap) {
                     var val = snap.val();
                     if (val === null) {
-                        $firebaseStorage.ref('files' + path + '@selectedSite', {isJs: false}).delete()
+                        $firebaseStorage.ref(root + path, {isJs: false}).delete()
                             .then(function () {
                                 def.resolve();
                             });
@@ -106,22 +108,22 @@
                 return deferred.promise;
             };
 
-            function moveFile(type,apiUrl, items, path, singleFilename){
+            function moveFile(type, apiUrl, items, path, singleFilename) {
                 var self = this,
-                    _path = path==='/'? '/':path+'/',
-                    validPath=$firebase.getValidKey(_path),
+                    _path = path === '/' ? '/' : path + '/',
+                    validPath = $firebase.getValidKey(_path),
                     deferred = $q.defer(),
-                    promises=[],
+                    promises = [],
                     data = {};
 
 
                 self.inprocess = true;
                 self.error = '';
-                angular.forEach(items,function(item){
+                angular.forEach(items, function (item) {
                     var itemPathArr = item.split('/'),
-                        fileName = singleFilename||itemPathArr.pop(),
+                        fileName = singleFilename || itemPathArr.pop(),
 
-                        promise = $firebaseStorage.copy('files'+item+'@selectedSite', 'files'+_path+(singleFilename||fileName)+'@selectedSite',type==='move', function(meta){
+                        promise = $firebaseStorage.copy(root + item, root + _path + (singleFilename || fileName), type === 'move', function (meta) {
                             data[$firebase.getValidKey(fileName)] = {
                                 rights: 'drwxr-xr-x',
                                 size: meta.size,
@@ -130,17 +132,17 @@
                                 type: 'file'
                             };
                         });
-                    if(type==='move'){
+                    if (type === 'move') {
                         var srcPath = itemPathArr.join('/'),
-                            _srcPath = srcPath===''? '/':srcPath+'/';
-                        promise.then(function(){
-                            $firebase.queryRef('files').child(_srcPath+'_content').child($firebase.getValidKey(fileName)).remove();
+                            _srcPath = srcPath === '' ? '/' : srcPath + '/';
+                        promise.then(function () {
+                            $firebase.queryRef('files').child(_srcPath + '_content').child($firebase.getValidKey(fileName)).remove();
                         });
                     }
                     promises.push(promise);
                 });
-                $q.all(promises).then(function(){
-                    $firebase.queryRef('files').child(validPath+'_content').update(data);
+                $q.all(promises).then(function () {
+                    $firebase.queryRef('files').child(validPath + '_content').update(data);
                     self.deferredHandler({
                         action: type,
                         items: items,
@@ -152,7 +154,7 @@
             }
 
             ApiHandler.prototype.copy = function (apiUrl, items, path, singleFilename) {
-                return moveFile.apply(this, ['copy',apiUrl, items, path, singleFilename]);
+                return moveFile.apply(this, ['copy', apiUrl, items, path, singleFilename]);
                 // var self = this,
                 //     _path = path==='/'? '/':path+'/',
                 //     validPath=$firebase.getValidKey(_path),
@@ -192,7 +194,7 @@
             };
 
             ApiHandler.prototype.move = function (apiUrl, items, path) {
-                return moveFile.apply(this, ['move',apiUrl, items, path]);
+                return moveFile.apply(this, ['move', apiUrl, items, path]);
                 //
                 // var self = this;
                 // var deferred = $q.defer();
@@ -247,7 +249,7 @@
 
                 if (files && files.length) {
                     for (var i = 0; i < files.length; i++) {
-                        $firebaseStorage.ref('files' + destination + '/' + files[i].name + '@selectedSite', {isJs: false}).put(files[i]);
+                        $firebaseStorage.ref(root + destination + '/' + files[i].name, {isJs: false}).put(files[i]);
                         data[$firebase.getValidKey(files[i].name)] = {
                             rights: 'drwxr-xr-x',
                             size: files[i].size,
@@ -338,7 +340,7 @@
             };
 
             ApiHandler.prototype.getUrl = function (apiUrl, path) {
-                return $firebaseStorage.ref('files' + path + '@selectedSite', {isJs: false}).getDownloadURL();
+                return $firebaseStorage.ref(root + path, {isJs: false}).getDownloadURL();
             };
 
             ApiHandler.prototype.download = function (apiUrl, itemPath, toFilename) {
@@ -347,7 +349,7 @@
 
                 var deferred = $q.defer();
                 self.inprocess = true;
-                $firebaseStorage.ref('files' + itemPath + '@selectedSite', {isJs: false})
+                $firebaseStorage.ref(root + itemPath, {isJs: false})
                     .getMetadata()
                     .then(function (meta) {
                         var url = $firebaseStorage.getSingleDownloadUrl(meta.downloadURLs);
