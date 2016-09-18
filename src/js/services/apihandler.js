@@ -245,35 +245,67 @@
                 self.error = '';
 
                 var data = {},
+                    promises=[],
                     validDest = $firebase.getValidKey(destination);
 
-                if (files && files.length) {
-                    for (var i = 0; i < files.length; i++) {
-                        $firebaseStorage.ref(root + destination + '/' + files[i].name, {isJs: false}).put(files[i]);
-                        data[$firebase.getValidKey(files[i].name)] = {
-                            rights: 'drwxr-xr-x',
-                            size: files[i].size,
-                            date: files[i].lastModified,
-                            name: files[i].name,
-                            type: 'file'
-                        };
-                    }
-                    $firebase.queryRef('files').child(validDest + '/_content').update(data)
-                        .then(function () {
-                            var res = {
-                                result: {
-                                    error: null,
-                                    success: true
-                                }
-                            };
-                            self.deferredHandler(res, deferred, 200);
-
-                            self.inprocess = false;
-                            self.progress = 0;
-                            self.progress = Math.min(100, parseInt(100.0)) - 1;
-                        });
+                function buildIndexData(file){
+                    data[$firebase.getValidKey(file.name)] = {
+                        rights: 'drwxr-xr-x',
+                        size: file.size,
+                        date: file.lastModified,
+                        name: file.name,
+                        type: 'file'
+                    };
                 }
 
+                if (files && files.length) {
+                    files.forEach(function(file){
+                        var ref = $firebaseStorage.ref(root + destination + '/' + files[i].name);
+                        if(file.type==='text/css'){
+                            promises.push(new Promise(function(resolve,reject){
+                                $firebaseStorage.fixCSSFile(file).then(function(fixedCSSFile){
+                                    ref.put(fixedCSSFile);
+                                    buildIndexData(file);
+                                    resolve();
+                                })
+                            }));
+                        } else {
+                            ref.put(file);
+                            buildIndexData(file);
+                        }
+                    });
+                    // for (var i = 0; i < files.length; i++) {
+                    //     if(files[i].type==='text/css'){
+                    //         $firebaseStorage.fixCSSFile(files[i]).then(function(fixedCSSFile){
+                    //             $firebaseStorage.ref(root + destination + '/' + files[i].name).put(files[i]);
+                    //
+                    //         })
+                    //     }
+                    //     $firebaseStorage.ref(root + destination + '/' + files[i].name).put(files[i]);
+                    //     data[$firebase.getValidKey(files[i].name)] = {
+                    //         rights: 'drwxr-xr-x',
+                    //         size: files[i].size,
+                    //         date: files[i].lastModified,
+                    //         name: files[i].name,
+                    //         type: 'file'
+                    //     };
+                    // }
+                    Promise.all(promises).then(function(){
+                        $firebase.queryRef('files').child(validDest + '/_content').update(data)
+                            .then(function () {
+                                var res = {
+                                    result: {
+                                        error: null,
+                                        success: true
+                                    }
+                                };
+                                self.deferredHandler(res, deferred, 200);
+                                self.inprocess = false;
+                                self.progress = 0;
+                                self.progress = Math.min(100, parseInt(100.0)) - 1;
+                            });
+                    })
+                }
                 return deferred.promise;
             };
 
